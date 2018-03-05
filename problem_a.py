@@ -6,10 +6,10 @@ Created on Mar 4, 2018
 
 import sys
 import requests
-import numpy as np
 from datetime import datetime
 import asyncio
 import aiohttp
+import numpy as np
 
 HEADERS = {
     'user-agent': ('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_5) '
@@ -105,10 +105,6 @@ def computeResults(scores, use_sample_std_dev):
 
 if __name__ == '__main__':
     
-    #===========================================================================
-    # command input params
-    #===========================================================================
-    
     search_type, search_id, size, verbosity, async, population_std_dev, is_test, is_help = parseCommandLineArgs()
     
     if is_help:
@@ -125,17 +121,41 @@ if __name__ == '__main__':
         exit()
 
     if is_test:
-        pass
-        #TODO: implement test suits
+        test_cases = (
+            ('t', 'ENSG00000157764'),
+            ('d', 'EFO_0002422'), 
+            ('d', 'EFO_0000616'),
+        )
+        results = (
+            (1.0, 7.4006e-06, 0.321235479534, 0.3604306793),
+            (1.0, 2.1e-07, 0.0547549997623, 0.120994621099),
+            (1.0, 1.946e-07, 0.317462726813, 0.334038477862),
+        )
+        for (search_type, search_id), (tmax_v, tmin_v, tmean, tstd_dev) in zip(test_cases, results):
+            pt = 'target' if search_type == 't' else 'disease'
+            sys.stdout.write('Running test case for %s %s' % (pt, search_id))
+            t_start = datetime.now()
+            scores = fetchAllScores(search_type=search_type, 
+                                    search_id=search_id, 
+                                    size=size, 
+                                    async=async, 
+                                    verbose=verbosity)
+            t_end = datetime.now()
+            sys.stdout.write('All scores fetched in {0} seconds.\n'.format(t_end - t_start))
+            max_v, min_v, mean, std_dev = computeResults(scores, use_sample_std_dev=not population_std_dev)
+            np.testing.assert_almost_equal(max_v, tmax_v)
+            np.testing.assert_almost_equal(min_v, tmin_v)
+            np.testing.assert_almost_equal(mean, tmean)
+            np.testing.assert_almost_equal(std_dev, tstd_dev)
+            sys.stdout.write('test case passed\n')
+        sys.stdout.write('All test cases passed.\n')
+        exit()
         
     if None in [search_type, search_id]:    
         error_message = 'Error: missing search type or target id, use --help for help.\n'
         sys.stdout.write(error_message)
         exit()
     
-    #===========================================================================
-    # operation 
-    #===========================================================================
     if verbosity:
         sys.stdout.write('starting...\n')
 
@@ -154,26 +174,7 @@ if __name__ == '__main__':
     sys.stdout.write('           average: {0}\n'.format(mean))
     sys.stdout.write('standard deviation: {0}\n'.format(std_dev))
         
-    #requirements;
-    # numpy: pip3 install numpy
-    # aiohttp: pip3 install aiohttp
-    # aiofiles: pip3 install aiofiles (maybe not make sure)
-    #   
-      
-      
-# ENSG00000157764,       
-#            maximum: 1.0
-#            minimum: 7.4006e-06
-#            average: 0.32123547953434595
-# standard deviation: 0.3604306792999846    
     
-    
-    
-    
-    # parse arguments such that:
-    #    `python my_code_test.py -t ENSG00000157764` will run an analysis for a target
-    #    `python my_code_test.py -d EFO_0002422` will run an analysis for a disease
-    #    `python my_code_test.py --test` will run a suite of tests
 
     
 
