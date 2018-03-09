@@ -180,7 +180,6 @@ def create_jobs(data_map, jobs_path, num_jobs):
 if __name__ == '__main__':
     sys.stdout.write('starting...\n\n')
     
-    
     data_path = os.path.join(DATA_PATH, 'output', 'problem_b_first_part.csv')
     jobs_path = os.path.join(DATA_PATH, 'output', 'jobs')
     assert os.path.exists(data_path)
