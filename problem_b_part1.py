@@ -15,12 +15,11 @@ from functools import wraps
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_PATH = os.path.join(BASE_DIR, 'data')
-LIMIT = 0
 
 data_map = {}
 
 
-def get_median(data):
+def getMedian(data):
     n = len(data)
     if n == 0:
         return 0
@@ -50,7 +49,7 @@ def worker(jsonline):
     return (target_id, disease_id, association_score) 
     
     
-def process_result(result):
+def processResult(result):
     for target_id, disease_id, association_score in result:
         if target_id not in data_map:
             data_map[target_id] = {}
@@ -60,7 +59,7 @@ def process_result(result):
 
 
 @measure_time
-def handle_main_single(data_path):
+def handleDataSingle(data_path):
     with open(data_path, 'rb') as jsonsrc:
         for ith, jsonline in enumerate(jsonsrc):
             if ith % 100000 == 0: sys.stdout.write('read %s data lines\n' % ith)
@@ -73,28 +72,26 @@ def handle_main_single(data_path):
             if disease_id not in data_map[target_id]:
                 data_map[target_id][disease_id] = []
             data_map[target_id][disease_id].append(association_score)
-            if ith == LIMIT - 1: break
 
 
 @measure_time
-def handle_main_multi(data_path):
-    pool = mp.Pool()
+def handleDataMulti(data_path):
+    pool = mp.Pool(processes=mp.cpu_count())
     with open(data_path, 'rb') as jsonsrc:
         partial = []
         for ith, line in enumerate(jsonsrc):
             if ith % 100000 == 0: sys.stdout.write('read %s data lines\n' % ith)
             partial.append(line)
-            if len(partial) == 5000:
-                process_result(pool.map(worker, partial))
+            if len(partial) == 100000:
+                processResult(pool.map(worker, partial, chunksize=1000))
                 partial = []
-            if ith == LIMIT - 1: break 
-        process_result(pool.map(worker, partial))
+        processResult(pool.map(worker, partial, chunksize=1000))
         pool.close()
         pool.join()
 
 
 @measure_time
-def output_stage_processing(data_map, output_path):
+def outputStageProcessing(data_map, output_path):
     big_list = []
     for target_id, v in data_map.items():
         for disease_id, scores in v.items():
@@ -104,7 +101,7 @@ def output_stage_processing(data_map, output_path):
                 top3 = scores
             else:
                 top3 = scores[ln - 3:ln]
-            median = get_median(scores)
+            median = getMedian(scores)
             big_list.append((median, target_id, disease_id, top3))
     big_list.sort()
     write_path = os.path.join(output_path, 'problem_b_first_part.csv')
@@ -123,13 +120,13 @@ if __name__ == '__main__':
     output_path = os.path.join(DATA_PATH, 'output')
     assert os.path.exists(output_path)
         
-    handle_main_multi(data_path)
-    output_stage_processing(data_map, output_path)
+    handleDataMulti(data_path)
+    outputStageProcessing(data_map, output_path)
     
     sys.stdout.write('\n\ndone')
 
-    #Operation completed in 0:03:34.487030 seconds
-    #Operation completed in 0:00:12.608518 seconds
+    # Operation completed in 0:03:23.640885 seconds
+    # Operation completed in 0:00:12.608518 seconds
 
 
 

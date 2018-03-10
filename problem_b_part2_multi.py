@@ -17,7 +17,9 @@ from datetime import datetime
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_PATH = os.path.join(BASE_DIR, 'data', 'output', 'problem_b_first_part.csv')
-WORKER_DATA_PATH = os.path.join(BASE_DIR, 'data', 'output', 'worker_data.txt')
+
+global DATA
+DATA = []
 
 
 #===============================================================================
@@ -119,8 +121,10 @@ def generatePairs(data, from_i=0, from_j=1, num_combs=None):
 #===============================================================================
 
 @measure_time
-def get_data_map():
+def getDataMap():
     data_map = {}
+    disease_map = {}
+    disease_count = 0
     with open(DATA_PATH) as csvfile:
         reader = csv.reader(csvfile)
         for ith, row in enumerate(reader):
@@ -128,38 +132,42 @@ def get_data_map():
                 sys.stdout.write('data_map: processed %s rows\n' % ith)
             target_id, disease_id = row[0], row[1]
             if target_id not in data_map: data_map[target_id] = set()
-            data_map[target_id].add(disease_id)
+            if disease_id not in disease_map:
+                disease_map[disease_id] = disease_count
+                disease_count += 1
+            data_map[target_id].add(disease_map[disease_id])
     return data_map
 
 
-def countWorker(job_id, data, chunk):
-    sys.stdout.write('worker %s starting with chunk %s:\n' % (job_id, chunk))
+def countWorker(job_id, chunk):
+    sys.stdout.write('job %s starting with chunk %s:\n' % (job_id, chunk))
     pair_count = 0
     a, b = chunk
     chunk_size = b - a + 1
-    i_from, j_from = find2CombinationFromIndex(a, len(data))
-    for ith, (v1, v2) in enumerate(generatePairs(data, i_from, j_from, num_combs=chunk_size)):
+    i_from, j_from = find2CombinationFromIndex(a, len(DATA))
+    for ith, (v1, v2) in enumerate(generatePairs(DATA, i_from, j_from, num_combs=chunk_size)):
         if len(v1.intersection(v2)) > 1:
             pair_count += 1
         if (ith + 1) % int(1e6) == 0:
-            sys.stdout.write('worker %s: processed %s M rows out of %s Ms, (%s)\n' % 
+            sys.stdout.write('job %s: processed %s M rows out of %s Ms, (%s)\n' % 
                              (job_id, (ith + 1)/1e6, chunk_size/1e6, pair_count))
     return pair_count
 
 
 @measure_time
 def countPairs(data_map, num_jobs):        
-    data = list(data_map.values())
-    n = len(data)
+    for v in data_map.values():
+        DATA.append(v)
+    n = len(DATA)
     chunks = partition2Combinations(n, num_jobs)
-    jobs = [(i + 1, data, chunk) for i, chunk in enumerate(chunks)]
+    jobs = [(i + 1, chunk) for i, chunk in enumerate(chunks)]
     sys.stdout.write('-'* 10 + '\n')
     sys.stdout.write('Generated %s jobs with the following chunks:\n' % len(jobs))
-    for jid, data, chunk in jobs:
+    for jid, chunk in jobs:
         sys.stdout.write('%s: %s\n' % (jid, chunk))
     sys.stdout.write('-'* 10 + '\n')
-    pool = mp.Pool()
-    results = pool.starmap(countWorker, jobs)
+    pool = mp.Pool(processes=mp.cpu_count())
+    results = pool.starmap(countWorker, jobs, chunksize=1)
     pool.close()
     pool.join()
     final_result = sum(results)
@@ -186,14 +194,14 @@ def testCombinationEnumeration():
 if __name__ == '__main__':
     sys.stdout.write('starting...\n\n')
     testCombinationEnumeration()
-    num_jobs = mp.cpu_count() + 2
-    data_map = get_data_map()
+    num_jobs = 10 * mp.cpu_count() 
+    data_map = getDataMap()
     result = countPairs(data_map, num_jobs)
-    sys.stdout.write('%s\n' % result)
+    sys.stdout.write('number of pairs: %s\n' % result)
     sys.stdout.write('\n\ndone')
-    
+
 #===========================================================================
-# Results
+# Output
 #===========================================================================
 # testCombinationEnumeration started...
 # testCombinationEnumeration completed successfully
@@ -209,8 +217,8 @@ if __name__ == '__main__':
 # 6: (456738655, 548086385)
 # ----------
 # Operation completed in 0:06:37.995477 seconds
-# 121114622
-    
+# number of pairs: 121114622
+
     
     
     
