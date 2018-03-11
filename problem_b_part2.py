@@ -17,17 +17,6 @@ DATA_PATH = os.path.join(BASE_DIR, 'data')
 LIMIT = -1
 
 
-def get_median(data):
-    n = len(data)
-    if n == 0:
-        return 0
-    if n % 2 == 1:
-        return data[n//2]
-    else:
-        i = n // 2
-        return (data[i - 1] + data[i])/2
-
-
 def measure_time(func):
     @wraps(func)
     def wrapped(*args, **kwargs):
@@ -40,7 +29,7 @@ def measure_time(func):
 
 
 @measure_time
-def get_data_map(data_path):
+def getDataMap(data_path):
     data_map = {}
     with open(data_path) as csvfile:
         reader = csv.reader(csvfile)
@@ -55,7 +44,7 @@ def get_data_map(data_path):
 
 
 @measure_time
-def count_single(data_map):
+def countSingle(data_map):
     pair_count = 0
     total = (len(data_map) * (len(data_map) - 1)) / 2000000
     items = list(data_map.values())
@@ -80,7 +69,7 @@ def worker(pairs):
     
 
 @measure_time
-def count_multi(data_map):
+def countMulti(data_map):
     num_chunks = mp.cpu_count() - 1
     chunk_size = 1000
     pair_count = 0
@@ -119,7 +108,7 @@ def worker2(pair):
 
 
 @measure_time
-def count_multi2(data_map):
+def countMulti2(data_map):
     pool = mp.Pool()
     pair_count = 0
     total = (len(data_map) * (len(data_map) - 1)) / 2000000
@@ -142,7 +131,7 @@ def count_multi2(data_map):
 
 
 @measure_time
-def create_jobs(data_map, jobs_path, num_jobs):
+def createJobs(data_map, jobs_path, num_jobs):
     import shutil
     if os.path.exists(jobs_path):
         shutil.rmtree(jobs_path)
@@ -182,10 +171,10 @@ if __name__ == '__main__':
     jobs_path = os.path.join(DATA_PATH, 'output', 'jobs')
     assert os.path.exists(data_path)
     
-    data_map = get_data_map(data_path)
-    result = count_single(data_map)
-    #result = count_multi(data_map)
-    #result = count_multi2(data_map)
+    data_map = getDataMap(data_path)
+    result = countSingle(data_map)
+    #result = countMulti(data_map)
+    #result = countMulti2(data_map)
     sys.stdout.write('%s\n' % result)
     
     #Operation completed in 0:00:02.551176 seconds
